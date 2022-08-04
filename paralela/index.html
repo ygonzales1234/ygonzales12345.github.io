@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU"
+      crossorigin="anonymous"
+    />
+
+    <title>Yulissa</title>
+  </head> 
+  <br> 
+  <br> 
+  <b>  <center> <h3>REDES DE COMPUTADORAS  </h3></center> </b> 
+  <h5><center>Calculadora</center></h5>
+  
+  <body>  
+    <div class="container">
+      <div class="row">
+        <div class="row g-3">
+          <input
+            type="text"
+            class="form-control"
+            id="ip"
+            placeholder="Direccion IP "
+          />
+          
+        <div class=" row g-3">
+          <input
+            type="number"
+            class="form-control"
+            id="subnets"
+            placeholder="Numero de subredes"
+          />
+          
+         
+        <button class="btn btn-success mt-1 px-2" onclick="getSubnets()">
+          Enviar
+        </button>
+      </div>
+      <div class="row">
+        <div id="subnetTable"></div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript; choose one of the two! -->
+
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const getSubnets = () => {
+        document.getElementById("subnetTable").innerHTML = "";
+
+        if (
+          !RegExp(
+            "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+          ).test(document.getElementById("ip").value)
+        ) {
+          return alert("Ingrese una ip valida");
+        }
+
+        let ip = document.getElementById("ip").value.split(".");
+        let numberSubnets = document.getElementById("subnets").value;
+
+        if (ip.length != 4 || !numberSubnets)
+          return alert("Rellene todos los campos");
+
+        switch (true) {
+          case ip[0] >= 192 && ip[0] <= 223 && numberSubnets <= 62:
+            renderTable(numberSubnets, ip, "C");
+            break;
+          case ip[0] >= 128 && ip[0] <= 191 && numberSubnets <= 254:
+            renderTable(numberSubnets, ip, "B");
+            break;
+          case ip[0] >= 0 && ip[0] <= 127 && numberSubnets <= 254:
+            renderTable(numberSubnets, ip, "A");
+            break;
+          default:
+            return alert("Intente con una ip diferente.");
+            break;
+        }
+      };
+
+      const renderTable = (subnets, ip, ipClass) => {
+        let numberBits;
+        if (subnets == 1) return alert("No es necesario usar subredes.");
+        for (let i = 1; i <= 8; i++) {
+          if (2 ** i - 2 >= subnets) {
+            numberBits = i;
+            break;
+          }
+        }
+
+        let jumps = 256 / 2 ** numberBits;
+        let numberSubnets = 2 ** numberBits;
+        let configurableIps = {
+          C: 2 ** (8 - numberBits) - 2,
+          B: 2 ** (16 - numberBits) - 2,
+          A: 2 ** (24 - numberBits) - 2,
+        };
+        let htmlTable = `
+          <table class="table caption-top mb-0">
+            <tbody>
+              <tr>
+                <th scope="row">Bits prestados</th>
+                <td>${numberBits}</td>
+              </tr>
+              <tr>
+                <th scope="row">Subredes</th>
+                <td>${numberSubnets}</td>
+              </tr>
+              <tr>
+                <th scope="row">Subredes Configurables</th>
+                <td>${numberSubnets - 2}</td>
+              </tr>
+              <tr>
+                <th scope="row">Ips configurables por cada subred</th>
+                <td>${configurableIps[ipClass]}</td>
+              </tr>
+              <tr>
+                <th scope="row">Mascara de la subred</th>
+                <td>${
+                  getBroadcast(numberBits, ipClass)[0] +
+                  getBroadcast(numberBits, ipClass)[1]
+                }</td>
+              </tr>
+              <tr>
+                <th scope="row">Saltos</th>
+                <td>${jumps}</td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="table caption-top">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">IP de sub red</th>
+                <th scope="col">Rango de IPs configurables</th>
+                <th scope="col">IP de Broadcast de la sub red</th>
+              </tr>
+            </thead>
+            <tbody>
+
+          `;
+        let idRed;
+        for (let i = 1; i <= numberSubnets; i++) {
+          switch (ipClass) {
+            case "C":
+              idRed = `${ip[0]}.${ip[1]}.${ip[2]}`;
+              htmlTable += `
+              <tr id="row${i}">
+                <th scope="row">${i}</th>
+                <td>${idRed}.${(i - 1) * jumps}</td>
+                <td>${idRed}.${(i - 1) * jumps + 1} - ${idRed}.${
+                (i - 1) * jumps + jumps - 2
+              }${getBroadcast(numberBits, "C")[1]}</td>
+                <td>${idRed}.${(i - 1) * jumps + jumps - 1}</td>
+              </tr>
+              `;
+              break;
+            case "B":
+              idRed = `${ip[0]}.${ip[1]}`;
+              htmlTable += `
+              <tr id="row${i}">
+                <th scope="row">${i}</th>
+                <td>${idRed}.${(i - 1) * jumps}.0</td>
+                <td>${idRed}.${(i - 1) * jumps}.1 - ${idRed}.${
+                (i - 1) * jumps + jumps - 1
+              }.254${getBroadcast(numberBits, ipClass)[1]}</td>
+                <td>${idRed}.${(i - 1) * jumps + jumps - 1}.255</td>
+              </tr>
+              `;
+              break;
+            case "A":
+              idRed = `${ip[0]}`;
+              htmlTable += `
+              <tr id="row${i}">
+                <th scope="row">${i}</th>
+                <td>${idRed}.${(i - 1) * jumps}.0.0</td>
+                <td>${idRed}.${(i - 1) * jumps}.0.1 - ${idRed}.${
+                (i - 1) * jumps + jumps - 1
+              }.255.254${getBroadcast(numberBits, ipClass)[1]}</td>
+                <td>${idRed}.${(i - 1) * jumps + jumps - 1}.255.255</td>
+              </tr>
+              `;
+              break;
+          }
+        }
+
+        htmlTable += `
+        </tbody>
+      </table>
+          `;
+
+        document.getElementById("subnetTable").innerHTML = htmlTable;
+        Array.from(Array(numberSubnets)).forEach((_, index) => {
+          console.log(index);
+          index > 0 && index <= document.getElementById("subnets").value
+            ? (document.getElementById("row" + (index + 1)).className =
+                "table-default")
+            : (document.getElementById("row" + (index + 1)).className =
+                "table-Secondary");
+        });
+        document.getElementById("row1").className = "table-danger";
+        document.getElementById(`row${numberSubnets}`).className =
+          "table-danger";
+      };
+
+      const getBroadcast = (numberBits, ipClass) => {
+        let binary = "";
+        for (let i = 1; i <= 8; i++) {
+          numberBits >= i ? (binary += "1") : (binary += "0");
+        }
+
+        switch (ipClass) {
+          case "C":
+            return [
+              `255.255.255.${parseInt(binary, 2)}`,
+              `/${24 + numberBits}`,
+            ];
+            break;
+          case "B":
+            return [`255.255.${parseInt(binary, 2)}.0`, `/${16 + numberBits}`];
+            break;
+          case "A":
+            return [`255.${parseInt(binary, 2)}.0.0`, `/${8 + numberBits}`];
+            break;
+        }
+      };
+    </script>
+    <!-- Option 2: Separate Popper and Bootstrap JS -->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" integrity="sha384-W8fXfP3gkOKtndU4JGtKDvXbO53Wy8SZCQHczT5FMiiqmQfUpWbYdTil/SxwZgAN" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.min.js" integrity="sha384-skAcpIdS7UcVUC05LJ9Dxay8AXcDYfBJqt1CJ85S/CFujBsIzCIv+l9liuYLaMQ/" crossorigin="anonymous"></script>
+    -->
+  </body>
+</html>
